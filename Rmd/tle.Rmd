@@ -4,7 +4,7 @@ output: html_document
 ---
 
 ```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_chunk$set(echo = TRUE, warning = FALSE, message = FALSE)
 library(tidyverse)
 ```
 
@@ -19,89 +19,54 @@ init <- readxl::read_xlsx("data/tle/2019-10-17_ALL.xlsx") %>%
          frag_id = factor(frag_id))
 ```
 
-# Import measurements from new data sheet
+# Create function to import data from standardized TLE datasheet
 ```{r}
-# Read full datasheet
-ds <- readxl::read_xlsx("data/tle/2019-11-12_CEI.xlsx")
-# Get number of trees-worth of data -- total number of columns divided by 6 (6 columns per tree-worth of data)
-ntrees <- ncol(ds) / 6
-
-# Read in header info for each tree
-tree_info <- readxl::read_xlsx("data/tle/2019-11-12_CEI.xlsx", n_max = 4, col_names = F) %>%
-  select(seq(2, ncol(ds), 6)) %>%
-  t() %>%
-  magrittr::set_colnames(c("person", "date", "nursery", "tree")) %>%
-  as_tibble() %>%
-  mutate(date = janitor::excel_numeric_to_date(as.numeric(date)),
-         tree = factor(tree))
-
-# Read in data sheet for all trees
-ds <- readxl::read_xlsx("data/tle/2019-11-12_CEI.xlsx", skip = 4)
-# Split data sheet into a single data frame for each measured tree
-tree_data <- lapply(seq(1, ncol(ds), 6), function(x) ds[, x:(x+5)])
-# Rearrange each tree's data frame into single set of columns
-tree_data <- map(tree_data, ~ rbind(as.matrix(.[, 1:3]), as.matrix(.[, 4:6]))) %>%
-  map(~ magrittr::set_colnames(., c("coral_id", "frag_id", "tle"))) %>%
-  map(~ as.data.frame(.))
-
-dd <- tree_info %>%
-  mutate(data = tree_data) %>%
-  unnest() %>%
-  fill(coral_id)
-
+import_from_tle_datasheet <- function(xlsx) {
+  # Read full datasheet
+  ds <- readxl::read_xlsx(xlsx)
+  # Read in header info for each tree (first 4 lines)
+  tree_info <- readxl::read_xlsx(xlsx, n_max = 4, col_names = F) %>%
+    select(seq(2, ncol(ds), 6)) %>%
+    t() %>%
+    magrittr::set_colnames(c("person", "date", "nursery", "tree")) %>%
+    as_tibble() %>%
+    mutate(date = janitor::excel_numeric_to_date(as.numeric(date)),
+           tree = factor(tree))
+  # Read in data sheet for all trees in datasheet
+  ds <- readxl::read_xlsx(xlsx, skip = 4)
+  # Split data sheet into a single data frame for each measured tree
+  tree_data <- lapply(seq(1, ncol(ds), 6), function(x) ds[, x:(x + 5)])
+  # Rearrange each tree's data frame into single set of columns
+  tree_data <- map(tree_data, ~ rbind(as.matrix(.[, 1:3]), as.matrix(.[, 4:6]))) %>%
+    map(~ magrittr::set_colnames(., c("coral_id", "frag_id", "tle"))) %>%
+    map(~ as.data.frame(.))
+  # Unnest into long form data frame
+  dsf <- tree_info %>%
+    mutate(data = tree_data) %>%
+    unnest() %>%
+    fill(coral_id)
+  return(dsf)
+}
 ```
 
-# Import measurements from new data sheet
+# Import from all datasheets and join with initial data
 ```{r}
-# Read full datasheet
-ds <- readxl::read_xlsx("data/tle/2019-11-23_NAS.xlsx")
-# Get number of trees-worth of data -- total number of columns divided by 6 (6 columns per tree-worth of data)
-ntrees <- ncol(ds) / 6
+# List data files (exluding initial data from all nurseries, imported above)
+all_tle_datasheets <- list.files(path = "data/tle", full.names = TRUE) %>% setdiff("data/tle/2019-10-17_ALL.xlsx")
 
-# Read in header info for each tree
-tree_info <- readxl::read_xlsx("data/tle/2019-11-23_NAS.xlsx", n_max = 4, col_names = F) %>%
-  select(seq(2, ncol(ds), 6)) %>%
-  t() %>%
-  magrittr::set_colnames(c("person", "date", "nursery", "tree")) %>%
-  as_tibble() %>%
-  mutate(date = janitor::excel_numeric_to_date(as.numeric(date)),
-         tree = factor(tree))
+# Import data from all datasheets
+tle <- map_dfr(all_tle_datasheets, import_from_tle_datasheet)
 
-# Read in data sheet for all trees
-ds <- readxl::read_xlsx("data/tle/2019-11-23_NAS.xlsx", skip = 4)
-# Split data sheet into a single data frame for each measured tree
-tree_data <- lapply(seq(1, ncol(ds), 6), function(x) ds[, x:(x+5)])
-# Rearrange each tree's data frame into single set of columns
-tree_data <- map(tree_data, ~ rbind(as.matrix(.[, 1:3]), as.matrix(.[, 4:6]))) %>%
-  map(~ magrittr::set_colnames(., c("coral_id", "frag_id", "tle"))) %>%
-  map(~ as.data.frame(.))
-
-dd2 <- tree_info %>%
-  mutate(data = tree_data) %>%
-  unnest() %>%
-  fill(coral_id)
-
-```
-
-# Join initial data with subsequent
-```{r}
-all <- bind_rows(init, dd, dd2) %>%
+# Join with initial data and tidy
+tle <- bind_rows(init, tle) %>%
   mutate(tle = str_split(tle, pattern = ","),
          tle_total = map_dbl(tle, ~ sum(as.numeric(.)))) %>%
   filter(coral_id != "(empty)")
-all
-
-bb <- all %>%
-  count(nursery, tree, coral_id, frag_id) %>%
-  filter(n > 1) %>%
-  left_join(all)
-
-ggplot(bb, aes(x = factor(date), y = tle_total)) +
-  geom_boxplot()
 ```
 
+# Plot
 ```{r}
-all %>%
+tle %>%
   group_by(nursery, coral_id, date) %>%
   summarise(mean_tle = mean(tle_total, na.rm = T)) %>%
   ggplot(aes(x = date, y = mean_tle, group = coral_id, color = coral_id)) +
