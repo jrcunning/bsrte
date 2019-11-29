@@ -1,15 +1,17 @@
 ---
-title: "Analysis of Acerv total linear extension"
+title: "Shedd *Acropora cervicornis* transplant experiment"
 output: html_document
 ---
 
 ```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE, warning = FALSE, message = FALSE)
+knitr::opts_chunk$set(echo = FALSE, warning = FALSE, message = FALSE)
 library(tidyverse)
 ```
 
+
+```{r, include = FALSE}
 # Import initial measurement data (2019-10-17)
-```{r}
+
 init <- readxl::read_xlsx("data/tle/2019-10-17_ALL.xlsx") %>%
   janitor::clean_names() %>%
   select(1:6) %>%
@@ -19,8 +21,10 @@ init <- readxl::read_xlsx("data/tle/2019-10-17_ALL.xlsx") %>%
          frag_id = factor(frag_id))
 ```
 
+
+```{r, include = FALSE}
 # Create function to import data from standardized TLE datasheet
-```{r}
+
 import_from_tle_datasheet <- function(xlsx) {
   # Read full datasheet
   ds <- readxl::read_xlsx(xlsx)
@@ -49,8 +53,10 @@ import_from_tle_datasheet <- function(xlsx) {
 }
 ```
 
+
+```{r, include = FALSE}
 # Import from all datasheets and join with initial data
-```{r}
+
 # List data files (exluding initial data from all nurseries, imported above)
 all_tle_datasheets <- list.files(path = "data/tle", full.names = TRUE) %>% setdiff("data/tle/2019-10-17_ALL.xlsx")
 
@@ -64,7 +70,7 @@ tle <- bind_rows(init, tle) %>%
   filter(coral_id != "(empty)")
 ```
 
-# Plot average for each genotype at each nursery
+# Average TLE for each genotype at each nursery
 ```{r}
 tle %>%
   group_by(nursery, coral_id, date) %>%
@@ -75,7 +81,7 @@ tle %>%
   facet_wrap(~ nursery)
 ```
 
-# Plot percent change for each genotype at each nursery
+# Average percent change for each genotype at each nursery
 ```{r}
 tle %>%
   group_by(nursery, tree, coral_id, frag_id) %>%
@@ -88,7 +94,7 @@ tle %>%
   facet_wrap(~ nursery)
 ```
 
-# Plot all fragments
+# TLE for all fragments
 ```{r}
 plots <- tle %>%
   group_by(nursery, tree) %>%
