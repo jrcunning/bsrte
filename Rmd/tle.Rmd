@@ -64,7 +64,7 @@ tle <- bind_rows(init, tle) %>%
   filter(coral_id != "(empty)")
 ```
 
-# Plot
+# Plot average for each genotype at each nursery
 ```{r}
 tle %>%
   group_by(nursery, coral_id, date) %>%
@@ -73,5 +73,34 @@ tle %>%
   geom_point() +
   geom_line() +
   facet_wrap(~ nursery)
+```
+
+# Plot percent change for each genotype at each nursery
+```{r}
+tle %>%
+  group_by(nursery, tree, coral_id, frag_id) %>%
+  mutate(pct_growth = tle_total / first(tle_total)) %>%
+  group_by(nursery, coral_id, date) %>%
+  summarise(mean_pct_growth = mean(pct_growth, na.rm = T)) %>%
+  ggplot(aes(x = date, y = mean_pct_growth, group = coral_id, color = coral_id)) +
+  geom_point() +
+  geom_line() +
+  facet_wrap(~ nursery)
+```
+
+# Plot all fragments
+```{r}
+plots <- tle %>%
+  group_by(nursery, tree) %>%
+  nest() %>%
+  mutate(plot = pmap(list(d = data, n = nursery, t = tree), function(d, n, t) {
+    ggplot(d, aes(x = date, y = tle_total, group = frag_id, color = frag_id)) +
+      facet_wrap(~ coral_id, scales = "free", nrow = 2) +
+      geom_line() + geom_point() +
+      labs(title = paste(n, "Tree", t), x = "", y = "Total Linear Extension (cm)") +
+      theme(axis.text.x = element_text(angle = 45, hjust = 1))
+    }))
+
+plots %>% pull(plot)
 ```
 
