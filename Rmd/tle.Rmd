@@ -6,6 +6,8 @@ output: html_document
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = FALSE, warning = FALSE, message = FALSE)
 library(tidyverse)
+library(lme4)
+library(lsmeans)
 ```
 
 
@@ -110,3 +112,82 @@ plots <- tle %>%
 plots %>% pull(plot)
 ```
 
+# Create some fake data to start testing model fitting
+```{r, eval = F}
+newdat1 <- tle %>%
+  group_by(nursery, tree, coral_id, frag_id) %>%
+  summarise(max_tle = max(tle_total)) %>%
+  mutate(date = as.Date("2019-12-15"),
+         tle_total = case_when(nursery == "BIM" ~ round(max_tle * 1.8, 0),
+                               nursery == "NAS" ~ round(max_tle * 1.5, 0),
+                               nursery == "CEI" ~ round(max_tle * 1.3, 0),
+                               nursery == "CAT" ~ round(max_tle * 1.1, 0)))
+
+newdat2 <- tle %>%
+  group_by(nursery, tree, coral_id, frag_id) %>%
+  summarise(max_tle = max(tle_total)) %>%
+  mutate(date = as.Date("2020-01-15"),
+         tle_total = case_when(nursery == "BIM" ~ round(max_tle * 1.5, 0),
+                               nursery == "NAS" ~ round(max_tle * 1.2, 0),
+                               nursery == "CEI" ~ round(max_tle * 1.2, 0),
+                               nursery == "CAT" ~ round(max_tle * 1.1, 0)))
+
+newtle <- bind_rows(tle, newdat1, newdat2) %>%
+  mutate(days = as.numeric(date - as.Date("2019-10-12")))
+  
+```
+
+# Fit exponential model (log transform tle) - specific growth rate
+```{r, eval = F}
+# Fixed effects days, nursery, and coral_id, random intercepts and slopes for each fragment
+mod <- lmer(log(tle_total) ~ days * nursery * coral_id + (1|tree:coral_id:frag_id), data = newtle)
+
+# Calculate slope (growth rate) for each coral_id at each nursery
+lsm <- lstrends(mod, specs = c("nursery", "coral_id"), var = "days")
+# Summarize results in data frame
+grates <- summary(lsm)
+
+# Test for differences within each genotype
+cont <- contrast(lsm, "pairwise", by = "coral_id")
+cont
+
+# Plot growth rates of each coral at each nursery with standard error
+ggplot(grates, aes(x = nursery, y = days.trend)) +
+  facet_wrap(~ coral_id) +
+  geom_point() +
+  geom_errorbar(aes(ymin = lower.CL, ymax = upper.CL))
+```
+
+# Fit linear model - centimeters per day
+```{r, eval = F}
+# Fixed effects days, nursery, and coral_id, random intercepts and slopes for each fragment
+mod <- lmer(tle_total ~ days * nursery * coral_id + (days|tree:coral_id:frag_id), data = newtle)
+
+# Calculate slope (growth rate) for each coral_id at each nursery
+lsm <- lstrends(mod, specs = c("nursery", "coral_id"), var = "days")
+# Summarize results in data frame
+grates <- summary(lsm)
+
+# Plot growth rates of each coral at each nursery with standard error
+ggplot(grates, aes(x = nursery, y = days.trend)) +
+  facet_wrap(~ coral_id) +
+  geom_point() +
+  geom_errorbar(aes(ymin = lower.CL, ymax = upper.CL))
+```
+
+
+# TLE for all fake fragments
+```{r, eval = F}
+plots <- newtle %>%
+  group_by(nursery, tree) %>%
+  nest() %>%
+  mutate(plot = pmap(list(d = data, n = nursery, t = tree), function(d, n, t) {
+    ggplot(d, aes(x = date, y = tle_total, group = frag_id, color = frag_id)) +
+      facet_wrap(~ coral_id, scales = "free", nrow = 2) +
+      geom_line() + geom_point() +
+      labs(title = paste(n, "Tree", t), x = "", y = "Total Linear Extension (cm)") +
+      theme(axis.text.x = element_text(angle = 45, hjust = 1))
+    }))
+
+plots %>% pull(plot)
+```
