@@ -112,8 +112,12 @@ plots <- tle %>%
 plots %>% pull(plot)
 ```
 
-# Create some fake data to start testing model fitting
+
 ```{r, eval = F}
+
+# Create some fake data to start testing model fitting
+
+
 newdat1 <- tle %>%
   group_by(nursery, tree, coral_id, frag_id) %>%
   summarise(max_tle = max(tle_total)) %>%
@@ -137,8 +141,11 @@ newtle <- bind_rows(tle, newdat1, newdat2) %>%
   
 ```
 
-# Fit exponential model (log transform tle) - specific growth rate
+
 ```{r, eval = F}
+# Fit exponential model (log transform tle) - specific growth rate
+
+
 # Fixed effects days, nursery, and coral_id, random intercepts and slopes for each fragment
 mod <- lmer(log(tle_total) ~ days * nursery * coral_id + (1|tree:coral_id:frag_id), data = newtle)
 
@@ -158,8 +165,10 @@ ggplot(grates, aes(x = nursery, y = days.trend)) +
   geom_errorbar(aes(ymin = lower.CL, ymax = upper.CL))
 ```
 
-# Fit linear model - centimeters per day
+
 ```{r, eval = F}
+# Fit linear model - centimeters per day
+
 # Fixed effects days, nursery, and coral_id, random intercepts and slopes for each fragment
 mod <- lmer(tle_total ~ days * nursery * coral_id + (days|tree:coral_id:frag_id), data = newtle)
 
@@ -176,8 +185,10 @@ ggplot(grates, aes(x = nursery, y = days.trend)) +
 ```
 
 
-# TLE for all fake fragments
+
 ```{r, eval = F}
+# TLE for all fake fragments
+
 plots <- newtle %>%
   group_by(nursery, tree) %>%
   nest() %>%
