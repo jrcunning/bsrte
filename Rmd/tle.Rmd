@@ -19,7 +19,6 @@ md <- read_csv("coral_metadata.csv") %>%
 
 ```{r, include = FALSE}
 # Import initial measurement data (2019-10-17)
-
 init <- readxl::read_xlsx("data/tle/2019-10-17_ALL.xlsx") %>%
   janitor::clean_names() %>%
   select(1:6) %>%
@@ -32,7 +31,6 @@ init <- readxl::read_xlsx("data/tle/2019-10-17_ALL.xlsx") %>%
 
 ```{r, include = FALSE}
 # Create function to import data from standardized TLE datasheet
-
 import_from_tle_datasheet <- function(xlsx) {
   # Read full datasheet
   ds <- readxl::read_xlsx(xlsx)
@@ -64,7 +62,6 @@ import_from_tle_datasheet <- function(xlsx) {
 
 ```{r, include = FALSE}
 # Import from all datasheets and join with initial data
-
 # List data files (exluding initial data from all nurseries, imported above)
 all_tle_datasheets <- list.files(path = "data/tle", full.names = TRUE) %>% setdiff("data/tle/2019-10-17_ALL.xlsx")
 
@@ -171,7 +168,12 @@ grates <- left_join(grates, select(md, coral_id = source_coral_id, home = source
 grates <- mutate(grates, at_home = as.character(nursery) == as.character(home))
 
 # Test for differences within each genotype
-#cont <- summary(contrast(lsm, "pairwise", by = "coral_id"))
+cont <- contrast(lsm, "pairwise", by = "coral_id")
+cont
+summary(cont)
+cld(cont)
+cld(contrast(lsm, "pairwise", by = "coral_id"))
+
 
 # Plot growth rates of each coral at each nursery with standard error
 ggplot(grates, aes(x = nursery, y = days.trend, color = at_home)) +
