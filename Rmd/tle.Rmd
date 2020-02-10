@@ -158,7 +158,7 @@ plots <- tle %>%
 #plots %>% pull(plot)
 ```
 
-```{r, fig.width = 10, fig.height = 10, eval = F}
+```{r, fig.width = 10, fig.height = 10, eval = T}
 # Calculate slope (specific growth rate) for each coral_id at each nursery
 lsm <- lstrends(mod, specs = c("nursery", "coral_id"), var = "days")
 # Summarize results in data frame
