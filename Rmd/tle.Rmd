@@ -108,7 +108,7 @@ tle %>%
 plots <- tle %>%
   group_by(nursery, tree) %>%
   nest() %>%
-  mutate(plot = pmap(list(d = data, n = nursery, t = tree), function(d, n, t) {
+  mutate(plot = pmap(list(d = data, n = as.character(nursery), t = tree), function(d, n, t) {
     ggplot(d, aes(x = date, y = tle_total, group = frag_id, color = frag_id)) +
       facet_wrap(~ coral_id, scales = "free", nrow = 2) +
       geom_line() + geom_point() +
@@ -145,20 +145,20 @@ plots <- tle %>%
   group_by(nursery, tree) %>%
   nest() %>%
   full_join(pp) %>%
-  mutate(plot = pmap(list(d = data, p = pred, n = nursery, t = tree), function(d, p, n, t) {
+  mutate(plot = pmap(list(d = data, p = pred, n = as.character(nursery), t = tree), function(d, p, n, t) {
     ggplot(d, aes(x = date, y = tle_total, group = frag_id, color = frag_id)) +
       facet_wrap(~ coral_id, scales = "free", nrow = 2) +
       geom_line(lwd = 0.1) +
       geom_line(data = p) + 
       geom_point() +
-      labs(title = paste(as.character(n), "Tree", t), x = "", y = "Total Linear Extension (cm)") +
+      labs(title = paste(n, "Tree", t), x = "", y = "Total Linear Extension (cm)") +
       theme(axis.text.x = element_text(angle = 45, hjust = 1))
     }))
 
 #plots %>% pull(plot)
 ```
 
-```{r, fig.width = 10, fig.height = 10}
+```{r, fig.width = 10, fig.height = 10, eval = F}
 # Calculate slope (specific growth rate) for each coral_id at each nursery
 lsm <- lstrends(mod, specs = c("nursery", "coral_id"), var = "days")
 # Summarize results in data frame
@@ -169,11 +169,6 @@ grates <- mutate(grates, at_home = as.character(nursery) == as.character(home))
 
 # Test for differences within each genotype
 cont <- contrast(lsm, "pairwise", by = "coral_id")
-cont
-summary(cont)
-cld(cont)
-cld(contrast(lsm, "pairwise", by = "coral_id"))
-
 
 # Plot growth rates of each coral at each nursery with standard error
 ggplot(grates, aes(x = nursery, y = days.trend, color = at_home)) +
