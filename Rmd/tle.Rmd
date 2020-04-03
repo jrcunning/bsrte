@@ -4,7 +4,7 @@ output: html_document
 ---
 
 ```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = FALSE, warning = FALSE, message = FALSE, cache = TRUE)
+knitr::opts_chunk$set(echo = FALSE, warning = FALSE, message = FALSE, cache = TRUE, fig.width = 10)
 library(tidyverse)
 library(lme4)
 library(lsmeans)
@@ -146,11 +146,11 @@ plots <- tle %>%
   nest() %>%
   full_join(pp) %>%
   mutate(plot = pmap(list(d = data, p = pred, n = as.character(nursery), t = tree), function(d, p, n, t) {
-    ggplot(d, aes(x = date, y = tle_total, group = frag_id, color = frag_id)) +
+    ggplot(d, aes(x = date, y = tle_total, group = frag_id, color = frag_id, shape = frag_id)) +
       facet_wrap(~ coral_id, scales = "free", nrow = 2) +
-      geom_line(lwd = 0.1) +
-      geom_line(data = p) + 
-      geom_point() +
+      geom_line(lwd = 0.2) +
+      #geom_line(data = p, lwd = 0.3) + 
+      geom_point(alpha = 0.6) +
       labs(title = paste(n, "Tree", t), x = "", y = "Total Linear Extension (cm)") +
       theme(axis.text.x = element_text(angle = 45, hjust = 1))
     }))
@@ -185,8 +185,9 @@ ggplot(grates, aes(x = nursery, y = days.trend, color = at_home)) +
 ```
 
 # Plots for each fragment
-```{r}
+```{r plots}
 plots %>% pull(plot)
+
 ```
 
 ```{r, eval = F}
