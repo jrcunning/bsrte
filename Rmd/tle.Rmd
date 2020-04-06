@@ -63,7 +63,8 @@ import_from_tle_datasheet <- function(xlsx) {
 ```{r, include = FALSE}
 # Import from all datasheets and join with initial data
 # List data files (exluding initial data from all nurseries, imported above)
-all_tle_datasheets <- list.files(path = "data/tle", full.names = TRUE) %>% setdiff("data/tle/2019-10-17_ALL.xlsx")
+all_tle_datasheets <- list.files(path = "data/tle", full.names = TRUE) %>% 
+  setdiff(c("data/tle/2019-10-17_ALL.xlsx", "data/tle/Breakage_report.xlsx"))
 
 # Import data from all datasheets
 tle <- map_dfr(all_tle_datasheets, import_from_tle_datasheet)
@@ -75,6 +76,23 @@ tle <- bind_rows(init, tle) %>%
          nursery = factor(nursery, levels = c("BIM", "NAS", "CEI", "CAT", "EXU")),
          days = as.numeric(date - as.Date("2019-10-12"))) %>%
   filter(coral_id != "(empty)")
+
+# Import breakage report
+breakage <- readxl::read_xlsx("data/tle/Breakage_report.xlsx", col_types = c("text")) %>%
+  mutate(date = as.Date(as.character(date), format = "%Y%m%d"))
+
+tle <- left_join(tle, breakage)
+
+tle <- tle %>%
+  group_by(tree, coral_id, frag_id) %>%             # group by fragment
+  mutate(nbreak = cumsum(!is.na(breakage))) %>%     # get number of times each frag has broken
+  ungroup() %>%
+  mutate(frag_id = case_when(
+    nbreak > 0 ~ paste(frag_id, nbreak, sep = "_"), # make new frag_id for frag after each breakage
+    TRUE ~ frag_id)) %>%
+  mutate(nursery = factor(nursery, levels = c("BIM", "NAS", "CEI", "CAT", "EXU")))
+
+#tle %>% filter(tree == 147) %>% arrange(tree, coral_id, frag_id) %>% print(n = nrow(.))
 ```
 
 # Average TLE for each genotype at each nursery
