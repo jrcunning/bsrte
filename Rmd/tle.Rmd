@@ -5,9 +5,10 @@ output: html_document
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = FALSE, warning = FALSE, message = FALSE, cache = TRUE, fig.width = 10)
-library(tidyverse)
 library(lme4)
 library(lsmeans)
+library(multcomp)
+library(tidyverse)
 ```
 
 ```{r}
@@ -186,9 +187,9 @@ grates <- left_join(grates, select(md, coral_id = source_coral_id, home = source
 grates <- mutate(grates, at_home = as.character(nursery) == as.character(home))
 
 # Test for differences among nurseries for each genotype
-cldres2 <- cld(lsm, by = "coral_id", alpha = 0.05, Letters = letters, adjust = "tukey")
+cldres2 <- CLD(lsm, by = "coral_id", alpha = 0.05, Letters = letters, adjust = "tukey")
 posthocs <- data.frame(cldres2)
-posthocs <- left_join(posthocs, select(md, coral_id = source_coral_id, home = source_location)) %>%
+posthocs <- left_join(posthocs, dplyr::select(md, coral_id = source_coral_id, home = source_location)) %>%
   mutate(group = str_trim(.group))
 
 
