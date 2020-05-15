@@ -104,7 +104,9 @@ tle %>%
   ggplot(aes(x = date, y = mean_tle, group = coral_id, color = coral_id)) +
   geom_point() +
   geom_line() +
-  facet_wrap(~ nursery)
+  facet_wrap(~ nursery) +
+  scale_x_date(date_breaks = "months", date_labels = "%b '%y") +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
 ```
 
 
@@ -171,6 +173,7 @@ plots <- tle %>%
       #geom_line(data = p, lwd = 0.3) + 
       geom_point(alpha = 0.6) +
       labs(title = paste(n, "Tree", t), x = "", y = "Total Linear Extension (cm)") +
+      scale_x_date(date_breaks = "months", date_labels = "%b '%y") +
       theme(axis.text.x = element_text(angle = 45, hjust = 1))
     }))
 
