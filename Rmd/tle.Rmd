@@ -4,7 +4,7 @@ output: html_document
 ---
 
 ```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = FALSE, warning = FALSE, message = FALSE, cache = TRUE, fig.width = 10)
+knitr::opts_chunk$set(echo = FALSE, warning = FALSE, message = FALSE, cache = FALSE, fig.width = 10)
 library(lme4)
 library(lsmeans)
 library(multcomp)
@@ -96,8 +96,9 @@ tle <- tle %>%
 #tle %>% filter(tree == 147) %>% arrange(tree, coral_id, frag_id) %>% print(n = nrow(.))
 ```
 
+
 # Average TLE for each genotype at each nursery
-```{r, fig.height=10, fig.width=10}
+```{r, fig.height=8, fig.width=10}
 tle %>%
   group_by(nursery, coral_id, date) %>%
   summarise(mean_tle = mean(tle_total, na.rm = T)) %>%
@@ -138,6 +139,29 @@ plots <- tle %>%
     }))
 
 plots %>% pull(plot)
+```
+
+# Specific growth rates of each genotype
+```{r}
+# Fit exponential model (log transform tle) - specific growth rate
+
+# Fixed effects days, nursery, and coral_id, random intercepts and slopes for each fragment
+mod <- lmer(log(tle_total) ~ days * coral_id + (days|nursery:tree:coral_id:frag_id), data = tle)
+
+# Calculate slope (specific growth rate) for each coral_id at each nursery
+lsm <- lstrends(mod, specs = "coral_id", var = "days")
+# Summarize results in data frame
+grates <- summary(lsm) %>%
+  arrange(-days.trend) %>%
+  full_join(rename(md, coral_id = source_coral_id)) %>%
+  mutate(coral_id = factor(coral_id, levels = coral_id[rev(order(days.trend))]))
+
+
+# Plot growth rates of each coral genotype
+ggplot(grates, aes(x = coral_id, y = days.trend, color = source_location)) +
+  geom_point() +
+  geom_errorbar(aes(ymin = lower.CL, ymax = upper.CL), width = 0.5) +
+  labs(x = "", y = "Specific growth rate (d^-1)")
 ```
 
 # Specific growth rates of each genotype at each nursery
@@ -204,6 +228,23 @@ ggplot(grates, aes(x = nursery, y = days.trend, color = at_home)) +
   geom_errorbar(aes(ymin = lower.CL, ymax = upper.CL), width = 0.5) +
   geom_text(data = posthocs, aes(x = nursery, y = upper.CL + 0.001, label = group), size = 2.5, inherit.aes = FALSE) +
   labs(x = "", y = "Specific growth rate (d^-1)")
+```
+
+```{r}
+#how much have corals increased over 295 days?
+  
+nasmu <- data.frame(cldres2) %>%
+  filter(nursery == "NAS") %>%
+  summarise(meanmu = mean(days.trend))
+1*(1+nasmu)^295
+
+ceimu <- data.frame(cldres2) %>%
+  filter(nursery == "CEI") %>%
+  summarise(meanmu = mean(days.trend))
+1*(1+ceimu)^295
+
+# how big is avg fragment if they started out as ~5cm
+5*(1+ceimu)^295
 ```
 
 # Plots for each fragment
