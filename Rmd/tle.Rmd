@@ -149,6 +149,7 @@ plots %>% pull(plot)
 mod <- lmer(log(tle_total) ~ days * coral_id + (days|nursery:tree:coral_id:frag_id), data = tle)
 
 # Calculate slope (specific growth rate) for each coral_id at each nursery
+emm_options(pbkrtest.limit = 3147)
 lsm <- lstrends(mod, specs = "coral_id", var = "days")
 # Summarize results in data frame
 grates <- summary(lsm) %>%
