@@ -149,7 +149,7 @@ plots %>% pull(plot)
 mod <- lmer(log(tle_total) ~ days * coral_id + (days|nursery:tree:coral_id:frag_id), data = tle)
 
 # Calculate slope (specific growth rate) for each coral_id at each nursery
-emm_options(pbkrtest.limit = 3211)
+emm_options(pbkrtest.limit = 4000)
 lsm <- lstrends(mod, specs = "coral_id", var = "days")
 # Summarize results in data frame
 grates <- summary(lsm) %>%
@@ -215,7 +215,7 @@ grates <- left_join(grates, select(md, coral_id = source_coral_id, home = source
 grates <- mutate(grates, at_home = as.character(nursery) == as.character(home))
 
 # Test for differences among nurseries for each genotype
-cldres2 <- CLD(lsm, by = "coral_id", alpha = 0.05, Letters = letters, adjust = "tukey")
+cldres2 <- cld(lsm, by = "coral_id", alpha = 0.05, Letters = letters, adjust = "tukey")
 posthocs <- data.frame(cldres2)
 posthocs <- left_join(posthocs, dplyr::select(md, coral_id = source_coral_id, home = source_location)) %>%
   mutate(group = str_trim(.group))
